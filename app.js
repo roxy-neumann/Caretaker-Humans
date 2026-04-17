@@ -1,15 +1,3 @@
-const state = {
-  searchText: '',
-  minStats: { height: '', weight: '', strength: '', intellect: '', life: '' },
-  sortKey: 'name',
-  sortDir: 'asc'
-};
-
-const searchInput = document.getElementById('searchInput');
-const tableHeadRow = document.getElementById('tableHeadRow');
-const tableBody = document.getElementById('tableBody');
-const resultsInfo = document.getElementById('resultsInfo');
-const clearFiltersBtn = document.getElementById('clearFiltersBtn');
 const imageModal = document.getElementById('imageModal');
 const imageModalImg = document.getElementById('imageModalImg');
 const imageModalTitle = document.getElementById('imageModalTitle');
@@ -29,7 +17,40 @@ function getColumnValue(item, column) {
   return item[column.key];
 }
 
+function hasStatValue(item, key) {
+  return item.stats.some(entry => entry.name === key);
+}
+
+function getStatOptions(items) {
+  const seen = new Set();
+  const options = [];
+
+  for (const item of items) {
+    for (const stat of item.stats) {
+      if (seen.has(stat.name)) continue;
+      seen.add(stat.name);
+      options.push(stat.name);
+    }
+  }
+
+  return options;
+}
+
+function getMemoryColumns(statOptions) {
+  return [
+    { key: 'picture', label: '', type: 'image', sortable: false },
+    { key: 'name', label: 'Name', type: 'string', sortable: true },
+    { key: 'rarity', label: 'Rarity', type: 'rarity', sortable: true },
+    ...statOptions.map(stat => ({ key: stat, label: stat, type: 'number', sortable: true }))
+  ];
+}
+
+function getInitialMinStats(statOptions) {
+  return Object.fromEntries(statOptions.map(stat => [stat, '']));
+}
+
 function getRarityRank(rarity) {
+  if (rarity === 'Poor') return 0;
   if (rarity === 'Common') return 1;
   if (rarity === 'Uncommon') return 2;
   if (rarity === 'Rare') return 3;
@@ -54,40 +75,8 @@ function compareValues(a, b, column) {
   return String(valueA).localeCompare(String(valueB));
 }
 
-function applyFilters(data) {
-  const search = state.searchText.trim().toLowerCase();
-
-  return data.filter(item => {
-    const matchesSearch = !search || item.name.toLowerCase().includes(search);
-    if (!matchesSearch) return false;
-
-    for (const stat of statOptions) {
-      const minValue = state.minStats[stat];
-      if (minValue === '') continue;
-      if (getStatValue(item, stat) < Number(minValue)) return false;
-    }
-
-    return true;
-  });
-}
-
-function applySorting(data) {
-  const column = columns.find(col => col.key === state.sortKey);
-  const dir = state.sortDir === 'asc' ? 1 : -1;
-
-  return [...data].sort((a, b) => {
-    const result = compareValues(a, b, column);
-    if (result !== 0) return result * dir;
-    return a.name.localeCompare(b.name);
-  });
-}
-
-function getProcessedFoods() {
-  return applySorting(applyFilters(foods));
-}
-
-function openImageModal(item) {
-  imageModalImg.src = `img/food_${item.id}.png`;
+function openImageModal(item, imageSrc) {
+  imageModalImg.src = imageSrc;
   imageModalImg.alt = item.name;
   imageModalTitle.textContent = item.name;
   imageModal.classList.add('is-open');
@@ -109,7 +98,24 @@ function openRecipeModal(item) {
 
   for (const entry of item.recipe) {
     const li = document.createElement('li');
-    li.textContent = `${entry.quantity}x ${getFoodMaterialName(entry.materialId)}`;
+
+    const img = document.createElement('img');
+    img.className = 'recipe-material-img';
+    img.src = `img/material_${entry.materialId}.png`;
+    img.alt = '';
+    img.loading = 'lazy';
+    li.appendChild(img);
+
+    const name = document.createElement('span');
+    name.className = 'recipe-material-name';
+    name.textContent = getFoodMaterialName(entry.materialId);
+    li.appendChild(name);
+
+    const quantity = document.createElement('span');
+    quantity.className = 'recipe-material-quantity';
+    quantity.textContent = `${entry.quantity}x`;
+    li.appendChild(quantity);
+
     recipeModalList.appendChild(li);
   }
 
@@ -125,34 +131,66 @@ function closeRecipeModal() {
   recipeModalList.innerHTML = '';
 }
 
-function createStatHeaderInput(stat) {
+function createStatHeaderInput(table, stat) {
   const input = document.createElement('input');
-  input.id = `stat-${stat}`;
+  input.id = `${table.id}-stat-${stat}`;
   input.className = 'stat-input header-stat-input';
   input.type = 'number';
   input.min = '0';
   input.step = '1';
   input.placeholder = 'min';
-  input.value = state.minStats[stat];
+  input.value = table.state.minStats[stat];
   input.setAttribute('aria-label', `Minimum ${stat}`);
   input.addEventListener('click', event => event.stopPropagation());
   input.addEventListener('keydown', event => event.stopPropagation());
   input.addEventListener('input', () => {
-    state.minStats[stat] = input.value;
-    renderTableOnly();
+    table.state.minStats[stat] = input.value;
+    renderTableOnly(table);
   });
 
   return input;
 }
 
-function renderHeader() {
-  tableHeadRow.innerHTML = '';
+function applyFilters(table) {
+  const search = table.state.searchText.trim().toLowerCase();
 
-  for (const column of columns) {
+  return table.items.filter(item => {
+    const matchesSearch = !search || item.name.toLowerCase().includes(search);
+    if (!matchesSearch) return false;
+
+    for (const stat of table.statOptions) {
+      const minValue = table.state.minStats[stat];
+      if (minValue === '') continue;
+      if (getStatValue(item, stat) < Number(minValue)) return false;
+    }
+
+    return true;
+  });
+}
+
+function applySorting(table, data) {
+  const column = table.columns.find(col => col.key === table.state.sortKey);
+  const dir = table.state.sortDir === 'asc' ? 1 : -1;
+
+  return [...data].sort((a, b) => {
+    const result = compareValues(a, b, column);
+    if (result !== 0) return result * dir;
+    return a.name.localeCompare(b.name);
+  });
+}
+
+function getProcessedItems(table) {
+  return applySorting(table, applyFilters(table));
+}
+
+function renderHeader(table) {
+  table.elements.headRow.innerHTML = '';
+
+  for (const column of table.columns) {
     const th = document.createElement('th');
-    if (column.key === state.sortKey) th.classList.add('sorted-column');
+    if (column.key === table.state.sortKey) th.classList.add('sorted-column');
 
-    const stat = statOptions.find(option => option === column.key);
+    const stat = table.statOptions.find(option => option === column.key);
     const headerContent = document.createElement('div');
     headerContent.className = 'header-cell-content';
 
@@ -160,7 +198,7 @@ function renderHeader() {
     label.textContent = column.label;
     headerContent.appendChild(label);
 
-    if (stat) headerContent.appendChild(createStatHeaderInput(stat));
+    if (stat) headerContent.appendChild(createStatHeaderInput(table, stat));
 
     th.appendChild(headerContent);
 
@@ -169,75 +207,98 @@ function renderHeader() {
 
       const indicator = document.createElement('span');
       indicator.className = 'sort-indicator';
-      indicator.textContent = state.sortKey === column.key ? (state.sortDir === 'asc' ? '↑' : '↓') : '';
+      indicator.textContent = table.state.sortKey === column.key ? (table.state.sortDir === 'asc' ? '↑' : '↓') : '';
       label.appendChild(indicator);
 
       th.addEventListener('click', () => {
-        if (state.sortKey === column.key) state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc';
+        if (table.state.sortKey === column.key) table.state.sortDir = table.state.sortDir === 'asc' ? 'desc' : 'asc';
         else {
-          state.sortKey = column.key;
-          state.sortDir = 'asc';
+          table.state.sortKey = column.key;
+          table.state.sortDir = 'desc';
         }
-        renderTableOnly();
-        renderHeader();
+        renderTableOnly(table);
+        renderHeader(table);
       });
     }
 
-    tableHeadRow.appendChild(th);
+    table.elements.headRow.appendChild(th);
   }
 }
 
-function renderBody(rows) {
-  tableBody.innerHTML = '';
+function renderPictureCell(table, item, td) {
+  td.classList.add('picture-cell');
+
+  const img = document.createElement('img');
+  img.className = 'item-img';
+  img.src = table.getThumbSrc(item);
+  img.alt = item.name;
+  img.loading = 'lazy';
+  img.tabIndex = 0;
+  img.setAttribute('role', 'button');
+  img.setAttribute('aria-label', `Open larger image of ${item.name}`);
+  img.addEventListener('error', () => {
+    img.style.visibility = 'hidden';
+    img.removeAttribute('role');
+    img.removeAttribute('tabindex');
+  });
+  img.addEventListener('click', () => openImageModal(item, table.getImageSrc(item)));
+  img.addEventListener('keydown', event => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      openImageModal(item, table.getImageSrc(item));
+    }
+  });
+  td.appendChild(img);
+}
+
+function renderRecipeCell(item, td) {
+  td.classList.add('recipe-cell');
+
+  const button = document.createElement('button');
+  button.className = 'recipe-btn';
+  button.type = 'button';
+  button.textContent = 'Recipe';
+  button.addEventListener('click', () => openRecipeModal(item));
+  td.appendChild(button);
+}
+
+function renderBody(table, rows) {
+  table.elements.body.innerHTML = '';
 
   if (!rows.length) {
     const tr = document.createElement('tr');
     const td = document.createElement('td');
-    td.colSpan = columns.length;
+    td.colSpan = table.columns.length;
     td.className = 'empty';
-    td.textContent = 'No matching foods';
+    td.textContent = `No matching ${table.itemLabelPlural}`;
     tr.appendChild(td);
-    tableBody.appendChild(tr);
+    table.elements.body.appendChild(tr);
     return;
   }
 
   for (const item of rows) {
     const tr = document.createElement('tr');
 
-    for (const column of columns) {
+    for (const column of table.columns) {
       const td = document.createElement('td');
-      if (column.key === state.sortKey) td.classList.add('sorted-column');
+      if (column.key === table.state.sortKey) td.classList.add('sorted-column');
 
-      if (column.key === 'picture') {
-        td.classList.add('picture-cell');
-
-        const img = document.createElement('img');
-        img.className = 'food-img';
-        img.src = `img/food_${item.id}.png`;
-        img.alt = item.name;
-        img.loading = 'lazy';
-        img.tabIndex = 0;
-        img.setAttribute('role', 'button');
-        img.setAttribute('aria-label', `Open larger image of ${item.name}`);
-        img.addEventListener('click', () => openImageModal(item));
-        img.addEventListener('keydown', event => {
-          if (event.key === 'Enter' || event.key === ' ') {
-            event.preventDefault();
-            openImageModal(item);
-          }
-        });
-        td.appendChild(img);
-      }
+      if (column.key === 'picture') renderPictureCell(table, item, td);
       else if (column.key === 'rarity') td.innerHTML = `<span class="rarity-badge ${getRarityClass(item.rarity)}">${item.rarity}</span>`;
-      else if (column.key === 'recipe') {
-        td.classList.add('recipe-cell');
+      else if (column.key === 'recipe') renderRecipeCell(item, td);
+      else if (column.type === 'number') {
+        const value = getColumnValue(item, column);
+        td.classList.add('num');
 
-        const button = document.createElement('button');
-        button.className = 'recipe-btn';
-        button.type = 'button';
-        button.textContent = 'Recipe';
-        button.addEventListener('click', () => openRecipeModal(item));
-        td.appendChild(button);
+        if (table.statCellMode === 'matrix') {
+          td.classList.add('memory-stat-cell');
+          if (hasStatValue(item, column.key)) {
+            td.classList.add('has-stat');
+            td.style.setProperty('--stat-intensity', Math.max(0.2, Math.min(value / 10, 1)));
+            td.textContent = value;
+          }
+        }
+        else td.textContent = value;
       }
       else td.textContent = getColumnValue(item, column);
 
@@ -245,43 +306,100 @@ function renderBody(rows) {
       tr.appendChild(td);
     }
 
-    tableBody.appendChild(tr);
+    table.elements.body.appendChild(tr);
   }
 }
 
-function renderSummary(rows) {
-  resultsInfo.textContent = `${rows.length} item${rows.length === 1 ? '' : 's'}`;
+function renderSummary(table, rows) {
+  table.elements.resultsInfo.textContent = `${rows.length} ${rows.length === 1 ? table.itemLabel : table.itemLabelPlural}`;
 }
 
-function renderTableOnly() {
-  const rows = getProcessedFoods();
-  renderBody(rows);
-  renderSummary(rows);
+function renderTableOnly(table) {
+  const rows = getProcessedItems(table);
+  renderBody(table, rows);
+  renderSummary(table, rows);
 }
 
-function clearFilters() {
-  state.searchText = '';
-  state.minStats = { height: '', weight: '', strength: '', intellect: '', life: '' };
-  searchInput.value = '';
+function clearFilters(table) {
+  table.state.searchText = '';
+  table.state.minStats = getInitialMinStats(table.statOptions);
+  table.elements.searchInput.value = '';
 
-  for (const stat of statOptions) {
-    const input = document.getElementById(`stat-${stat}`);
+  for (const stat of table.statOptions) {
+    const input = document.getElementById(`${table.id}-stat-${stat}`);
     if (input) input.value = '';
   }
 
-  renderTableOnly();
+  renderTableOnly(table);
 }
 
-function init() {
-  renderHeader();
-  renderTableOnly();
+function initTable(table) {
+  renderHeader(table);
+  renderTableOnly(table);
 
-  searchInput.addEventListener('input', e => {
-    state.searchText = e.target.value;
-    renderTableOnly();
+  table.elements.searchInput.addEventListener('input', event => {
+    table.state.searchText = event.target.value;
+    renderTableOnly(table);
   });
 
-  clearFiltersBtn.addEventListener('click', clearFilters);
+  table.elements.clearBtn.addEventListener('click', () => clearFilters(table));
+}
+
+const resolvedMemoryStatOptions = typeof memoryStatOptions !== 'undefined' ? memoryStatOptions : getStatOptions(memories);
+
+const tables = [
+  {
+    id: 'food',
+    itemLabel: 'food',
+    itemLabelPlural: 'foods',
+    items: foods,
+    columns,
+    statOptions,
+    getThumbSrc: item => `img/small/food_${item.id}.png`,
+    getImageSrc: item => `img/food_${item.id}.png`,
+    state: {
+      searchText: '',
+      minStats: getInitialMinStats(statOptions),
+      sortKey: 'name',
+      sortDir: 'asc'
+    },
+    elements: {
+      searchInput: document.getElementById('foodSearchInput'),
+      clearBtn: document.getElementById('foodClearFiltersBtn'),
+      resultsInfo: document.getElementById('foodResultsInfo'),
+      headRow: document.getElementById('foodTableHeadRow'),
+      body: document.getElementById('foodTableBody')
+    }
+  },
+  {
+    id: 'memory',
+    itemLabel: 'memory',
+    itemLabelPlural: 'memories',
+    items: memories,
+    columns: getMemoryColumns(resolvedMemoryStatOptions),
+    statOptions: resolvedMemoryStatOptions,
+    statCellMode: 'matrix',
+    getThumbSrc: item => `img/memory_${item.id}.png`,
+    getImageSrc: item => `img/memory_${item.id}.png`,
+    state: {
+      searchText: '',
+      minStats: getInitialMinStats(resolvedMemoryStatOptions),
+      sortKey: 'name',
+      sortDir: 'asc'
+    },
+    elements: {
+      searchInput: document.getElementById('memorySearchInput'),
+      clearBtn: document.getElementById('memoryClearFiltersBtn'),
+      resultsInfo: document.getElementById('memoryResultsInfo'),
+      headRow: document.getElementById('memoryTableHeadRow'),
+      body: document.getElementById('memoryTableBody')
+    }
+  }
+];
+
+function init() {
+  for (const table of tables) initTable(table);
+
   imageModalClose.addEventListener('click', closeImageModal);
   recipeModalClose.addEventListener('click', closeRecipeModal);
   imageModal.addEventListener('click', event => {

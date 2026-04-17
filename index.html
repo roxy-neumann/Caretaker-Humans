@@ -18,30 +18,63 @@
             </div>
         </div>
 
-        <div class="panel controls">
-            <div class="controls-grid">
-                <div class="controls-left">
-                    <div class="search-block">
-                        <input id="searchInput" class="search-input" type="text" placeholder="Type part of a name..." />
+        <section class="data-section">
+            
+            <div class="panel controls">
+                <div class="controls-grid">
+                    <div class="controls-left">
+                        <h2 class="section-title">Food</h2>
+                        <div class="search-block">
+                            <input id="foodSearchInput" class="search-input" type="text" placeholder="Type part of a food name..." />
+                        </div>
+
+                        <button id="foodClearFiltersBtn" class="clear-btn" type="button">Clear Filters</button>
+
+                        <div id="foodResultsInfo" class="results-info">0 items</div>
                     </div>
-
-                    <button id="clearFiltersBtn" class="clear-btn" type="button">Clear Filters</button>
-
-                    <div id="resultsInfo">0 items</div>
                 </div>
             </div>
-        </div>
 
-        <div class="panel table-panel">
-            <div class="table-wrap">
-                <table>
-                    <thead>
-                        <tr id="tableHeadRow"></tr>
-                    </thead>
-                    <tbody id="tableBody"></tbody>
-                </table>
+            <div class="panel table-panel">
+                <div class="table-wrap">
+                    <table class="food-table">
+                        <thead>
+                            <tr id="foodTableHeadRow"></tr>
+                        </thead>
+                        <tbody id="foodTableBody"></tbody>
+                    </table>
+                </div>
             </div>
-        </div>
+        </section>
+
+        <section class="data-section">
+            
+            <div class="panel controls">
+                <div class="controls-grid">
+                    <div class="controls-left">
+                        <h2 class="section-title">Memories</h2>
+                        <div class="search-block">
+                            <input id="memorySearchInput" class="search-input" type="text" placeholder="Type part of a memory name..." />
+                        </div>
+
+                        <button id="memoryClearFiltersBtn" class="clear-btn" type="button">Clear Filters</button>
+
+                        <div id="memoryResultsInfo" class="results-info">0 items</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel table-panel">
+                <div class="table-wrap">
+                    <table class="memory-table">
+                        <thead>
+                            <tr id="memoryTableHeadRow"></tr>
+                        </thead>
+                        <tbody id="memoryTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
     </div>
 
     <div id="imageModal" class="image-modal" aria-hidden="true">
