@@ -37,6 +37,19 @@ body {
   margin-bottom: 18px;
 }
 
+.title-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.title-logo {
+  display: block;
+  width: 280px;
+  max-width: 42vw;
+  height: auto;
+}
+
 .title {
   margin: 0;
   font-size: 28px;

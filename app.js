@@ -19,6 +19,16 @@ const recipeModalTitle = document.getElementById('recipeModalTitle');
 const recipeModalList = document.getElementById('recipeModalList');
 const recipeModalClose = document.getElementById('recipeModalClose');
 
+function getStatValue(item, key) {
+  const stat = item.stats.find(entry => entry.name === key);
+  return stat ? stat.value : 0;
+}
+
+function getColumnValue(item, column) {
+  if (column.type === 'number') return getStatValue(item, column.key);
+  return item[column.key];
+}
+
 function getRarityRank(rarity) {
   if (rarity === 'Common') return 1;
   if (rarity === 'Uncommon') return 2;
@@ -36,8 +46,8 @@ function getFoodMaterialName(materialId) {
 }
 
 function compareValues(a, b, column) {
-  const valueA = a[column.key];
-  const valueB = b[column.key];
+  const valueA = getColumnValue(a, column);
+  const valueB = getColumnValue(b, column);
 
   if (column.type === 'number') return valueA - valueB;
   if (column.type === 'rarity') return getRarityRank(valueA) - getRarityRank(valueB);
@@ -52,9 +62,9 @@ function applyFilters(data) {
     if (!matchesSearch) return false;
 
     for (const stat of statOptions) {
-      const minValue = state.minStats[stat.key];
+      const minValue = state.minStats[stat];
       if (minValue === '') continue;
-      if ((item[stat.key] || 0) < Number(minValue)) return false;
+      if (getStatValue(item, stat) < Number(minValue)) return false;
     }
 
     return true;
@@ -117,18 +127,18 @@ function closeRecipeModal() {
 
 function createStatHeaderInput(stat) {
   const input = document.createElement('input');
-  input.id = `stat-${stat.key}`;
+  input.id = `stat-${stat}`;
   input.className = 'stat-input header-stat-input';
   input.type = 'number';
   input.min = '0';
   input.step = '1';
   input.placeholder = 'min';
-  input.value = state.minStats[stat.key];
-  input.setAttribute('aria-label', `Minimum ${stat.label}`);
+  input.value = state.minStats[stat];
+  input.setAttribute('aria-label', `Minimum ${stat}`);
   input.addEventListener('click', event => event.stopPropagation());
   input.addEventListener('keydown', event => event.stopPropagation());
   input.addEventListener('input', () => {
-    state.minStats[stat.key] = input.value;
+    state.minStats[stat] = input.value;
     renderTableOnly();
   });
 
@@ -142,7 +152,7 @@ function renderHeader() {
     const th = document.createElement('th');
     if (column.key === state.sortKey) th.classList.add('sorted-column');
 
-    const stat = statOptions.find(option => option.key === column.key);
+    const stat = statOptions.find(option => option === column.key);
     const headerContent = document.createElement('div');
     headerContent.className = 'header-cell-content';
 
@@ -229,7 +239,7 @@ function renderBody(rows) {
         button.addEventListener('click', () => openRecipeModal(item));
         td.appendChild(button);
       }
-      else td.textContent = item[column.key];
+      else td.textContent = getColumnValue(item, column);
 
       if (column.type === 'number') td.classList.add('num');
       tr.appendChild(td);
@@ -255,7 +265,7 @@ function clearFilters() {
   searchInput.value = '';
 
   for (const stat of statOptions) {
-    const input = document.getElementById(`stat-${stat.key}`);
+    const input = document.getElementById(`stat-${stat}`);
     if (input) input.value = '';
   }
 
