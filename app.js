@@ -21,27 +21,6 @@ function hasStatValue(item, key) {
   return item.stats.some(entry => entry.name === key);
 }
 
-function hasSortValue(item, column) {
-  if (column.type === 'number') return hasStatValue(item, column.key);
-  const value = getColumnValue(item, column);
-  return value !== undefined && value !== null && value !== '';
-}
-
-function getStatOptions(items) {
-  const seen = new Set();
-  const options = [];
-
-  for (const item of items) {
-    for (const stat of item.stats) {
-      if (seen.has(stat.name)) continue;
-      seen.add(stat.name);
-      options.push(stat.name);
-    }
-  }
-
-  return options;
-}
-
 function getMemoryColumns(statOptions) {
   return [
     { key: 'picture', label: '', type: 'image', sortable: false },
@@ -53,6 +32,10 @@ function getMemoryColumns(statOptions) {
 
 function getInitialMinStats(statOptions) {
   return Object.fromEntries(statOptions.map(stat => [stat, '']));
+}
+
+function getInitialRequiredStats(statOptions) {
+  return Object.fromEntries(statOptions.map(stat => [stat, false]));
 }
 
 function getRarityRank(rarity) {
@@ -68,7 +51,7 @@ function getRarityClass(rarity) {
 }
 
 function getFoodMaterialName(materialId) {
-  const material = foodMaterials.find(item => item.id === materialId);
+  const material = foodMaterialById.get(materialId);
   return material ? material.name : materialId;
 }
 
@@ -138,6 +121,9 @@ function closeRecipeModal() {
 }
 
 function createStatHeaderInput(table, stat) {
+  const controls = document.createElement('div');
+  controls.className = 'stat-header-controls';
+
   const input = document.createElement('input');
   input.id = `${table.id}-stat-${stat}`;
   input.className = 'stat-input header-stat-input';
@@ -153,8 +139,33 @@ function createStatHeaderInput(table, stat) {
     table.state.minStats[stat] = input.value;
     renderTableOnly(table);
   });
+  controls.appendChild(input);
 
-  return input;
+  if (table.hasRequiredStatFilters) {
+    const requiredLabel = document.createElement('label');
+    requiredLabel.className = 'stat-required-label';
+    requiredLabel.title = `Require ${stat}`;
+    requiredLabel.addEventListener('click', event => event.stopPropagation());
+    requiredLabel.addEventListener('keydown', event => event.stopPropagation());
+
+    const checkbox = document.createElement('input');
+    checkbox.id = `${table.id}-required-${stat}`;
+    checkbox.className = 'stat-required-checkbox';
+    checkbox.type = 'checkbox';
+    checkbox.checked = table.state.requiredStats[stat];
+    checkbox.setAttribute('aria-label', `Require ${stat}`);
+    checkbox.addEventListener('click', event => event.stopPropagation());
+    checkbox.addEventListener('change', event => {
+      event.stopPropagation();
+      table.state.requiredStats[stat] = checkbox.checked;
+      renderTableOnly(table);
+    });
+
+    requiredLabel.appendChild(checkbox);
+    controls.appendChild(requiredLabel);
+  }
+
+  return controls;
 }
 
 function applyFilters(table) {
@@ -165,6 +176,8 @@ function applyFilters(table) {
     if (!matchesSearch) return false;
 
     for (const stat of table.statOptions) {
+      if (table.state.requiredStats[stat] && !hasStatValue(item, stat)) return false;
+
       const minValue = table.state.minStats[stat];
       if (minValue === '') continue;
       if (getStatValue(item, stat) < Number(minValue)) return false;
@@ -175,31 +188,19 @@ function applyFilters(table) {
 }
 
 function applySorting(table, data) {
+  const sortColumns = table.state.sorts
+    .map(sort => ({ ...sort, column: table.columnByKey.get(sort.key) }))
+    .filter(sort => sort.column);
+
   return [...data].sort((a, b) => {
-    if (table.state.sorts.length > 1) {
-      const presenceA = getSortPresenceCount(table, a);
-      const presenceB = getSortPresenceCount(table, b);
-      if (presenceA !== presenceB) return presenceB - presenceA;
-    }
-
-    for (const sort of table.state.sorts) {
-      const column = table.columns.find(col => col.key === sort.key);
-      if (!column) continue;
-
+    for (const sort of sortColumns) {
       const dir = sort.dir === 'asc' ? 1 : -1;
-      const result = compareValues(a, b, column);
+      const result = compareValues(a, b, sort.column);
       if (result !== 0) return result * dir;
     }
 
     return a.name.localeCompare(b.name);
   });
-}
-
-function getSortPresenceCount(table, item) {
-  return table.state.sorts.reduce((count, sort) => {
-    const column = table.columns.find(col => col.key === sort.key);
-    return column && hasSortValue(item, column) ? count + 1 : count;
-  }, 0);
 }
 
 function getProcessedItems(table) {
@@ -229,15 +230,19 @@ function renderHeader(table) {
 
     if (column.sortable) {
       th.classList.add('sortable');
-      th.title = 'Click to sort. Shift+Click to add, flip, or remove this column from combined sorting. Maximum 3 columns.';
+      th.title = table.hasMultiSort
+        ? 'Click to sort. Shift+Click to add, flip, or remove this column from combined sorting. Maximum 3 columns.'
+        : 'Click to sort. Click again to reverse direction.';
 
       const indicator = document.createElement('span');
       indicator.className = 'sort-indicator';
-      indicator.textContent = sort ? `${sort.dir === 'asc' ? '↑' : '↓'}${sortIndex + 1}` : '';
+      indicator.textContent = sort
+        ? `${sort.dir === 'asc' ? '↑' : '↓'}${table.hasMultiSort && table.state.sorts.length > 1 ? sortIndex + 1 : ''}`
+        : '';
       label.appendChild(indicator);
 
       th.addEventListener('click', event => {
-        updateSort(table, column.key, event.shiftKey);
+        updateSort(table, column.key, table.hasMultiSort && event.shiftKey);
         renderTableOnly(table);
         renderHeader(table);
       });
@@ -340,7 +345,6 @@ function renderBody(table, rows) {
           td.classList.add('memory-stat-cell');
           if (hasStatValue(item, column.key)) {
             td.classList.add('has-stat');
-            td.style.setProperty('--stat-intensity', Math.max(0.2, Math.min(value / 10, 1)));
             td.textContent = value;
           }
         }
@@ -348,7 +352,6 @@ function renderBody(table, rows) {
       }
       else td.textContent = getColumnValue(item, column);
 
-      if (column.type === 'number') td.classList.add('num');
       tr.appendChild(td);
     }
 
@@ -369,12 +372,16 @@ function renderTableOnly(table) {
 function clearFilters(table) {
   table.state.searchText = '';
   table.state.minStats = getInitialMinStats(table.statOptions);
+  table.state.requiredStats = getInitialRequiredStats(table.statOptions);
   table.state.sorts = [{ key: 'name', dir: 'asc' }];
   table.elements.searchInput.value = '';
 
   for (const stat of table.statOptions) {
     const input = document.getElementById(`${table.id}-stat-${stat}`);
     if (input) input.value = '';
+
+    const checkbox = document.getElementById(`${table.id}-required-${stat}`);
+    if (checkbox) checkbox.checked = false;
   }
 
   renderTableOnly(table);
@@ -382,6 +389,7 @@ function clearFilters(table) {
 }
 
 function initTable(table) {
+  table.columnByKey = new Map(table.columns.map(column => [column.key, column]));
   renderHeader(table);
   renderTableOnly(table);
 
@@ -393,7 +401,7 @@ function initTable(table) {
   table.elements.clearBtn.addEventListener('click', () => clearFilters(table));
 }
 
-const resolvedMemoryStatOptions = typeof memoryStatOptions !== 'undefined' ? memoryStatOptions : getStatOptions(memories);
+const foodMaterialById = new Map(foodMaterials.map(material => [material.id, material]));
 
 const tables = [
   {
@@ -403,11 +411,14 @@ const tables = [
     items: foods,
     columns,
     statOptions,
+    hasRequiredStatFilters: false,
+    hasMultiSort: true,
     getThumbSrc: item => `img/small/food_${item.id}.png`,
     getImageSrc: item => `img/food_${item.id}.png`,
     state: {
       searchText: '',
       minStats: getInitialMinStats(statOptions),
+      requiredStats: getInitialRequiredStats(statOptions),
       sorts: [{ key: 'name', dir: 'asc' }]
     },
     elements: {
@@ -423,14 +434,17 @@ const tables = [
     itemLabel: 'memory',
     itemLabelPlural: 'memories',
     items: memories,
-    columns: getMemoryColumns(resolvedMemoryStatOptions),
-    statOptions: resolvedMemoryStatOptions,
+    columns: getMemoryColumns(memoryStatOptions),
+    statOptions: memoryStatOptions,
     statCellMode: 'matrix',
-    getThumbSrc: item => `img/memory_${item.id}.png`,
+    hasRequiredStatFilters: true,
+    hasMultiSort: false,
+    getThumbSrc: item => `img/small/memory_${item.id}.png`,
     getImageSrc: item => `img/memory_${item.id}.png`,
     state: {
       searchText: '',
-      minStats: getInitialMinStats(resolvedMemoryStatOptions),
+      minStats: getInitialMinStats(memoryStatOptions),
+      requiredStats: getInitialRequiredStats(memoryStatOptions),
       sorts: [{ key: 'name', dir: 'asc' }]
     },
     elements: {

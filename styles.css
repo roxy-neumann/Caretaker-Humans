@@ -28,7 +28,6 @@ body {
 }
 
 .page {
-  /* max-width: 1380px; */
   margin: 0 auto;
   padding: 24px;
 }
@@ -65,12 +64,6 @@ body {
   margin: 0 0 10px;
   font-size: 20px;
   font-weight: 700;
-}
-
-.subtitle {
-  margin: 8px 0 0;
-  color: var(--muted);
-  font-size: 14px;
 }
 
 .panel {
@@ -159,13 +152,14 @@ table {
 .memory-table {
   min-width: 0;
 }
+
 .memory-table th {
   font-size: 12px;
 }
+
 .memory-table td {
   white-space: unset;
 }
-
 
 .memory-table th:nth-child(1),
 .memory-table td:nth-child(1) {
@@ -218,6 +212,32 @@ th {
   font-size: 11px;
   text-align: right;
   text-transform: none;
+}
+
+.stat-header-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.stat-required-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+  cursor: pointer;
+}
+
+.stat-required-checkbox {
+  width: 12px;
+  height: 12px;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
 }
 
 .header-stat-input::-webkit-inner-spin-button {
@@ -318,7 +338,7 @@ td.num {
 
 .sort-indicator {
   display: inline-block;
-  min-width: 22px;
+  min-width: 18px;
   margin-left: 4px;
   color: var(--accent-2);
   font-weight: 700;
