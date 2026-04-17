@@ -6,6 +6,9 @@ const recipeModal = document.getElementById('recipeModal');
 const recipeModalTitle = document.getElementById('recipeModalTitle');
 const recipeModalList = document.getElementById('recipeModalList');
 const recipeModalClose = document.getElementById('recipeModalClose');
+const materialsModal = document.getElementById('materialsModal');
+const materialsModalList = document.getElementById('materialsModalList');
+const materialsModalClose = document.getElementById('materialsModalClose');
 
 function getStatValue(item, key) {
   const stat = item.stats.find(entry => entry.name === key);
@@ -55,6 +58,10 @@ function getFoodMaterialName(materialId) {
   return material ? material.name : materialId;
 }
 
+function getOrganicForMaterial(materialId) {
+  return organicByMaterialId.get(materialId);
+}
+
 function compareValues(a, b, column) {
   const valueA = getColumnValue(a, column);
   const valueB = getColumnValue(b, column);
@@ -84,28 +91,16 @@ function closeImageModal() {
 function openRecipeModal(item) {
   recipeModalTitle.textContent = `${item.name} Recipe`;
   recipeModalList.innerHTML = '';
+  recipeModalList.appendChild(renderMaterialHeader('Quantity'));
 
   for (const entry of item.recipe) {
-    const li = document.createElement('li');
-
-    const img = document.createElement('img');
-    img.className = 'recipe-material-img';
-    img.src = `img/material_${entry.materialId}.png`;
-    img.alt = '';
-    img.loading = 'lazy';
-    li.appendChild(img);
-
-    const name = document.createElement('span');
-    name.className = 'recipe-material-name';
-    name.textContent = getFoodMaterialName(entry.materialId);
-    li.appendChild(name);
-
-    const quantity = document.createElement('span');
-    quantity.className = 'recipe-material-quantity';
-    quantity.textContent = `${entry.quantity}x`;
-    li.appendChild(quantity);
-
-    recipeModalList.appendChild(li);
+    recipeModalList.appendChild(renderMaterialListItem(
+      entry.materialId,
+      getFoodMaterialName(entry.materialId),
+      `${entry.quantity}x`,
+      getOrganicForMaterial(entry.materialId),
+      true
+    ));
   }
 
   recipeModal.classList.add('is-open');
@@ -118,6 +113,107 @@ function closeRecipeModal() {
   recipeModal.setAttribute('aria-hidden', 'true');
   recipeModalTitle.textContent = '';
   recipeModalList.innerHTML = '';
+}
+
+function getFoodMaterialTotals() {
+  const totals = new Map(foodMaterials.map(material => [material.id, { material, quantity: 0 }]));
+
+  for (const food of foods) {
+    for (const entry of food.recipe) {
+      totals.get(entry.materialId).quantity += entry.quantity;
+    }
+  }
+
+  return [...totals.values()].sort((a, b) => b.quantity - a.quantity || a.material.name.localeCompare(b.material.name));
+}
+
+function renderMaterialListItem(materialId, nameText, quantityText, organic, showOrganicColumn = false) {
+  const li = document.createElement('li');
+  if (showOrganicColumn) li.classList.add('materials-info-row');
+
+  const img = document.createElement('img');
+  img.className = 'recipe-material-img';
+  img.src = `img/material_${materialId}.png`;
+  img.alt = '';
+  img.loading = 'lazy';
+  li.appendChild(img);
+
+  const name = document.createElement('span');
+  name.className = 'recipe-material-name';
+  name.textContent = nameText;
+  li.appendChild(name);
+
+  const quantity = document.createElement('span');
+  quantity.className = 'recipe-material-quantity';
+  quantity.textContent = quantityText;
+  li.appendChild(quantity);
+
+  if (showOrganicColumn) {
+    const organicSource = document.createElement('span');
+    organicSource.className = 'organic-source';
+
+    if (organic) {
+      const organicImg = document.createElement('img');
+      organicImg.className = 'organic-source-img';
+      organicImg.src = `img/small/organic_${organic.id}.png`;
+      organicImg.alt = '';
+      organicImg.loading = 'lazy';
+      organicSource.appendChild(organicImg);
+
+      const organicName = document.createElement('span');
+      organicName.textContent = organic.name;
+      organicSource.appendChild(organicName);
+    }
+    else {
+      organicSource.textContent = 'Unknown';
+    }
+
+    li.appendChild(organicSource);
+  }
+
+  return li;
+}
+
+function renderMaterialHeader(quantityLabel) {
+  const li = document.createElement('li');
+  li.className = 'materials-info-header';
+
+  const icon = document.createElement('span');
+  icon.setAttribute('aria-hidden', 'true');
+  li.appendChild(icon);
+
+  for (const labelText of ['Material', quantityLabel, 'Organic']) {
+    const label = document.createElement('span');
+    label.textContent = labelText;
+    li.appendChild(label);
+  }
+
+  return li;
+}
+
+function openMaterialsModal() {
+  materialsModalList.innerHTML = '';
+  materialsModalList.appendChild(renderMaterialHeader('Total'));
+
+  for (const entry of getFoodMaterialTotals()) {
+    materialsModalList.appendChild(renderMaterialListItem(
+      entry.material.id,
+      entry.material.name,
+      entry.quantity,
+      getOrganicForMaterial(entry.material.id),
+      true
+    ));
+  }
+
+  materialsModal.classList.add('is-open');
+  materialsModal.setAttribute('aria-hidden', 'false');
+  materialsModalClose.focus();
+}
+
+function closeMaterialsModal() {
+  materialsModal.classList.remove('is-open');
+  materialsModal.setAttribute('aria-hidden', 'true');
+  materialsModalList.innerHTML = '';
 }
 
 function createStatHeaderInput(table, stat) {
@@ -192,6 +288,8 @@ function applySorting(table, data) {
     .map(sort => ({ ...sort, column: table.columnByKey.get(sort.key) }))
     .filter(sort => sort.column);
 
+  if (!sortColumns.length) return [...data];
+
   return [...data].sort((a, b) => {
     for (const sort of sortColumns) {
       const dir = sort.dir === 'asc' ? 1 : -1;
@@ -222,17 +320,18 @@ function renderHeader(table) {
 
     const label = document.createElement('span');
     label.textContent = column.label;
-    headerContent.appendChild(label);
+    if (!(table.id === 'food' && column.key === 'recipe')) headerContent.appendChild(label);
 
     if (stat) headerContent.appendChild(createStatHeaderInput(table, stat));
+    if (table.id === 'food' && column.key === 'recipe') headerContent.appendChild(createFoodMaterialsInfoButton());
 
     th.appendChild(headerContent);
 
     if (column.sortable) {
       th.classList.add('sortable');
       th.title = table.hasMultiSort
-        ? 'Click to sort. Shift+Click to add, flip, or remove this column from combined sorting. Maximum 3 columns.'
-        : 'Click to sort. Click again to reverse direction.';
+        ? 'Click to sort descending, ascending, then off. Shift+Click adds columns to combined sorting. Maximum 3 columns.'
+        : 'Click to sort descending, ascending, then off.';
 
       const indicator = document.createElement('span');
       indicator.className = 'sort-indicator';
@@ -252,12 +351,26 @@ function renderHeader(table) {
   }
 }
 
+function createFoodMaterialsInfoButton() {
+  const button = document.createElement('button');
+  button.className = 'recipe-btn recipe-header-btn';
+  button.type = 'button';
+  button.textContent = 'Recipe';
+  button.title = 'Food Materials Info';
+  button.addEventListener('click', event => {
+    event.stopPropagation();
+    openMaterialsModal();
+  });
+  return button;
+}
+
 function updateSort(table, key, isMultiSort) {
   const index = table.state.sorts.findIndex(sort => sort.key === key);
 
   if (!isMultiSort) {
     if (index === 0 && table.state.sorts.length === 1) {
-      table.state.sorts[0].dir = table.state.sorts[0].dir === 'asc' ? 'desc' : 'asc';
+      if (table.state.sorts[0].dir === 'desc') table.state.sorts[0].dir = 'asc';
+      else table.state.sorts = [];
     }
     else table.state.sorts = [{ key, dir: 'desc' }];
     return;
@@ -272,8 +385,6 @@ function updateSort(table, key, isMultiSort) {
   const sort = table.state.sorts[index];
   if (sort.dir === 'desc') sort.dir = 'asc';
   else table.state.sorts.splice(index, 1);
-
-  if (!table.state.sorts.length) table.state.sorts = [{ key: 'name', dir: 'asc' }];
 }
 
 function renderPictureCell(table, item, td) {
@@ -373,7 +484,7 @@ function clearFilters(table) {
   table.state.searchText = '';
   table.state.minStats = getInitialMinStats(table.statOptions);
   table.state.requiredStats = getInitialRequiredStats(table.statOptions);
-  table.state.sorts = [{ key: 'name', dir: 'asc' }];
+  table.state.sorts = [];
   table.elements.searchInput.value = '';
 
   for (const stat of table.statOptions) {
@@ -402,6 +513,13 @@ function initTable(table) {
 }
 
 const foodMaterialById = new Map(foodMaterials.map(material => [material.id, material]));
+const organicByMaterialId = new Map();
+
+for (const organic of organics) {
+  for (const materialId of organic.materials) {
+    organicByMaterialId.set(materialId, organic);
+  }
+}
 
 const tables = [
   {
@@ -419,7 +537,7 @@ const tables = [
       searchText: '',
       minStats: getInitialMinStats(statOptions),
       requiredStats: getInitialRequiredStats(statOptions),
-      sorts: [{ key: 'name', dir: 'asc' }]
+      sorts: []
     },
     elements: {
       searchInput: document.getElementById('foodSearchInput'),
@@ -445,7 +563,7 @@ const tables = [
       searchText: '',
       minStats: getInitialMinStats(memoryStatOptions),
       requiredStats: getInitialRequiredStats(memoryStatOptions),
-      sorts: [{ key: 'name', dir: 'asc' }]
+      sorts: []
     },
     elements: {
       searchInput: document.getElementById('memorySearchInput'),
@@ -462,15 +580,20 @@ function init() {
 
   imageModalClose.addEventListener('click', closeImageModal);
   recipeModalClose.addEventListener('click', closeRecipeModal);
+  materialsModalClose.addEventListener('click', closeMaterialsModal);
   imageModal.addEventListener('click', event => {
     if (event.target === imageModal) closeImageModal();
   });
   recipeModal.addEventListener('click', event => {
     if (event.target === recipeModal) closeRecipeModal();
   });
+  materialsModal.addEventListener('click', event => {
+    if (event.target === materialsModal) closeMaterialsModal();
+  });
   document.addEventListener('keydown', event => {
     if (event.key === 'Escape' && imageModal.classList.contains('is-open')) closeImageModal();
     if (event.key === 'Escape' && recipeModal.classList.contains('is-open')) closeRecipeModal();
+    if (event.key === 'Escape' && materialsModal.classList.contains('is-open')) closeMaterialsModal();
   });
 }
 

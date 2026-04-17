@@ -81,7 +81,7 @@ body {
 .controls-grid {
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: space-between;
   gap: 20px;
 }
 
@@ -296,23 +296,29 @@ td.num {
   width: 78px;
 }
 
+.clear-btn,
 .recipe-btn {
-  padding: 6px 8px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--panel-2);
+  background: #8d391c;
   color: var(--text);
-  font-size: 13px;
   cursor: pointer;
   transition: border-color 0.15s ease, background 0.15s ease, transform 0.1s ease;
 }
 
+.clear-btn:hover,
+.clear-btn:focus,
 .recipe-btn:hover,
 .recipe-btn:focus {
   border-color: var(--accent);
-  background: #232938;
+  background: #B94A24;
   outline: none;
   transform: translateY(-1px);
+}
+
+.recipe-btn {
+  padding: 6px 8px;
+  font-size: 13px;
 }
 
 .picture-cell {
@@ -346,6 +352,11 @@ td.num {
   font-size: 11px;
 }
 
+.recipe-header-btn {
+  font-size: 14px;
+  text-transform: uppercase;
+}
+
 .rarity-badge {
   display: inline-flex;
   align-items: center;
@@ -366,13 +377,13 @@ td.num {
 .rarity-common {
   background: rgba(156, 163, 175, 0.12);
   border-color: rgba(156, 163, 175, 0.28);
-  color: #d1d5db;
+  color: #cfcfcf;
 }
 
 .rarity-uncommon {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.18);
-  color: #f3f4f6;
+  background: rgba(255, 255, 255, 0.521);
+  border-color: rgb(255, 255, 255);
+  color: #313131;
 }
 
 .rarity-rare {
@@ -406,19 +417,7 @@ td.num {
 
 .clear-btn {
   padding: 10px 14px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--panel-2);
-  color: var(--text);
   font-size: 14px;
-  cursor: pointer;
-  transition: border-color 0.15s ease, background 0.15s ease, transform 0.1s ease;
-}
-
-.clear-btn:hover {
-  border-color: var(--accent);
-  background: #232938;
-  transform: translateY(-1px);
 }
 
 .image-modal,
@@ -447,6 +446,14 @@ td.num {
   background: var(--panel);
   box-shadow: var(--shadow);
   text-align: center;
+}
+
+#materialsModal .recipe-modal-dialog {
+  width: min(640px, 94vw);
+}
+
+#recipeModal .recipe-modal-dialog {
+  width: min(640px, 94vw);
 }
 
 .image-modal-dialog {
@@ -500,9 +507,17 @@ td.num {
 }
 
 .recipe-modal-title {
-  margin: 0 34px 18px 0;
+  margin: 0 34px 8px 0;
   color: var(--text);
   font-size: 20px;
+  text-align: left;
+}
+
+.modal-description {
+  margin: 0 34px 18px 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.4;
   text-align: left;
 }
 
@@ -523,6 +538,19 @@ td.num {
   color: var(--text);
 }
 
+.recipe-modal-list .materials-info-header,
+.recipe-modal-list .materials-info-row {
+  grid-template-columns: 42px minmax(120px, 1fr) 70px minmax(150px, 1fr);
+}
+
+.recipe-modal-list .materials-info-header {
+  padding-top: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
 .recipe-modal-list li:last-child {
   border-bottom: 0;
 }
@@ -541,4 +569,18 @@ td.num {
   color: var(--accent-2);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+}
+
+.organic-source {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.organic-source-img {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  object-fit: contain;
 }

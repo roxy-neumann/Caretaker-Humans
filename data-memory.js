@@ -1,8 +1,15 @@
 const memories = [
-  { id: 1, name: 'Assembly Instructions', rarity: 'Uncommon', stats: [{ name: 'Discipline', value: 2 }, { name: 'Logic', value: 8 }] },
-  { id: 2, name: 'Basketball', rarity: 'Poor', stats: [{ name: 'Patience', value: 1 }] },
-  { id: 3, name: 'Biology Notes', rarity: 'Uncommon', stats: [{ name: 'Wisdom', value: 10 }] },
-  { id: 4, name: 'Blueprints', rarity: 'Rare', stats: [{ name: 'Adaptability', value: 10 }, { name: 'Logic', value: 5 }] },
+  { id: 1, name: 'Assembly Instructions', rarity: 'Uncommon', stats: [
+    { name: 'Discipline', value: 2 }, { name: 'Logic', value: 8 }
+  ] },
+  { id: 2, name: 'Basketball', rarity: 'Poor', stats: [
+    { name: 'Patience', value: 1 }] },
+  { id: 3, name: 'Biology Notes', rarity: 'Uncommon', stats: [{ name: 'Wisdom', value: 10 }
+    
+  ] },
+  { id: 4, name: 'Blueprints', rarity: 'Rare', stats: [
+    { name: 'Adaptability', value: 10 }, { name: 'Logic', value: 5 }
+  ] },
   { id: 25, name: 'Bowling Ball', rarity: 'Poor', stats: [{ name: 'Patience', value: 1 }] },
   { id: 5, name: 'Bowling Pin', rarity: 'Poor', stats: [{ name: 'Patience', value: 1 }] },
   { id: 26, name: 'Camera', rarity: 'Uncommon', stats: [{ name: 'Communication', value: 5 }, { name: 'Creativity', value: 5 }] },

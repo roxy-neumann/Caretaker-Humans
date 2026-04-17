@@ -254,5 +254,5 @@ const columns = [
   { key: "strength", label: "Strength", type: "number", sortable: true },
   { key: "intellect", label: "Intellect", type: "number", sortable: true },
   { key: "life", label: "Life", type: "number", sortable: true },
-  { key: "recipe", label: "", type: "recipe", sortable: false }
+  { key: "recipe", label: "Recipe", type: "recipe", sortable: false }
 ];
