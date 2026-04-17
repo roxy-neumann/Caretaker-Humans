@@ -9,6 +9,9 @@ const recipeModalClose = document.getElementById('recipeModalClose');
 const materialsModal = document.getElementById('materialsModal');
 const materialsModalList = document.getElementById('materialsModalList');
 const materialsModalClose = document.getElementById('materialsModalClose');
+const materialsByMaterialBtn = document.getElementById('materialsByMaterialBtn');
+const materialsByOrganicBtn = document.getElementById('materialsByOrganicBtn');
+let materialsView = 'material';
 
 function getStatValue(item, key) {
   const stat = item.stats.find(entry => entry.name === key);
@@ -127,6 +130,30 @@ function getFoodMaterialTotals() {
   return [...totals.values()].sort((a, b) => b.quantity - a.quantity || a.material.name.localeCompare(b.material.name));
 }
 
+function getFoodMaterialTotalsById() {
+  return new Map(getFoodMaterialTotals().map(entry => [entry.material.id, entry.quantity]));
+}
+
+function getOrganicTotals() {
+  const materialTotals = getFoodMaterialTotalsById();
+
+  return organics
+    .map(organic => {
+      const materials = organic.materials.map(materialId => ({
+        id: materialId,
+        name: getFoodMaterialName(materialId),
+        quantity: materialTotals.get(materialId) || 0
+      }));
+
+      return {
+        organic,
+        quantity: Math.max(...materials.map(material => material.quantity)),
+        materials
+      };
+    })
+    .sort((a, b) => b.quantity - a.quantity || a.organic.name.localeCompare(b.organic.name));
+}
+
 function renderMaterialListItem(materialId, nameText, quantityText, organic, showOrganicColumn = false) {
   const li = document.createElement('li');
   if (showOrganicColumn) li.classList.add('materials-info-row');
@@ -174,7 +201,7 @@ function renderMaterialListItem(materialId, nameText, quantityText, organic, sho
   return li;
 }
 
-function renderMaterialHeader(quantityLabel) {
+function renderInfoHeader(labels) {
   const li = document.createElement('li');
   li.className = 'materials-info-header';
 
@@ -182,7 +209,7 @@ function renderMaterialHeader(quantityLabel) {
   icon.setAttribute('aria-hidden', 'true');
   li.appendChild(icon);
 
-  for (const labelText of ['Material', quantityLabel, 'Organic']) {
+  for (const labelText of labels) {
     const label = document.createElement('span');
     label.textContent = labelText;
     li.appendChild(label);
@@ -191,7 +218,62 @@ function renderMaterialHeader(quantityLabel) {
   return li;
 }
 
-function openMaterialsModal() {
+function renderMaterialHeader(quantityLabel) {
+  return renderInfoHeader(['Material', quantityLabel, 'Organic']);
+}
+
+function renderOrganicHeader() {
+  return renderInfoHeader(['Organic', 'Needed', 'Based On']);
+}
+
+function renderOrganicListItem(entry) {
+  const li = document.createElement('li');
+  li.className = 'materials-info-row';
+
+  const img = document.createElement('img');
+  img.className = 'recipe-material-img';
+  img.src = `img/small/organic_${entry.organic.id}.png`;
+  img.alt = '';
+  img.loading = 'lazy';
+  li.appendChild(img);
+
+  const name = document.createElement('span');
+  name.className = 'recipe-material-name';
+  name.textContent = entry.organic.name;
+  li.appendChild(name);
+
+  const quantity = document.createElement('span');
+  quantity.className = 'recipe-material-quantity';
+  quantity.textContent = entry.quantity;
+  li.appendChild(quantity);
+
+  const basedOn = document.createElement('span');
+  basedOn.className = 'materials-based-on';
+
+  for (const material of entry.materials) {
+    const materialItem = document.createElement('span');
+    materialItem.className = 'materials-based-on-item';
+
+    const materialImg = document.createElement('img');
+    materialImg.className = 'materials-based-on-img';
+    materialImg.src = `img/material_${material.id}.png`;
+    materialImg.alt = '';
+    materialImg.loading = 'lazy';
+    materialItem.appendChild(materialImg);
+
+    const materialText = document.createElement('span');
+    materialText.textContent = `${material.name} — ${material.quantity}`;
+    materialItem.appendChild(materialText);
+
+    basedOn.appendChild(materialItem);
+  }
+
+  li.appendChild(basedOn);
+
+  return li;
+}
+
+function renderMaterialsByMaterial() {
   materialsModalList.innerHTML = '';
   materialsModalList.appendChild(renderMaterialHeader('Total'));
 
@@ -204,6 +286,28 @@ function openMaterialsModal() {
       true
     ));
   }
+}
+
+function renderMaterialsByOrganic() {
+  materialsModalList.innerHTML = '';
+  materialsModalList.appendChild(renderOrganicHeader());
+
+  for (const entry of getOrganicTotals()) {
+    materialsModalList.appendChild(renderOrganicListItem(entry));
+  }
+}
+
+function renderMaterialsView() {
+  materialsByMaterialBtn.classList.toggle('is-active', materialsView === 'material');
+  materialsByOrganicBtn.classList.toggle('is-active', materialsView === 'organic');
+
+  if (materialsView === 'organic') renderMaterialsByOrganic();
+  else renderMaterialsByMaterial();
+}
+
+function openMaterialsModal() {
+  materialsView = 'material';
+  renderMaterialsView();
 
   materialsModal.classList.add('is-open');
   materialsModal.setAttribute('aria-hidden', 'false');
@@ -578,6 +682,14 @@ const tables = [
 function init() {
   for (const table of tables) initTable(table);
 
+  materialsByMaterialBtn.addEventListener('click', () => {
+    materialsView = 'material';
+    renderMaterialsView();
+  });
+  materialsByOrganicBtn.addEventListener('click', () => {
+    materialsView = 'organic';
+    renderMaterialsView();
+  });
   imageModalClose.addEventListener('click', closeImageModal);
   recipeModalClose.addEventListener('click', closeRecipeModal);
   materialsModalClose.addEventListener('click', closeMaterialsModal);

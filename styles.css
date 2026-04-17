@@ -521,6 +521,22 @@ td.num {
   text-align: left;
 }
 
+.materials-view-switch {
+  display: flex;
+  gap: 8px;
+  margin: 0 34px 18px 0;
+}
+
+.materials-view-btn {
+  font-size: 13px;
+}
+
+.materials-view-btn.is-active {
+  border-color: var(--accent);
+  background: #232938;
+  color: var(--accent-2);
+}
+
 .recipe-modal-list {
   margin: 0;
   padding: 0;
@@ -581,6 +597,30 @@ td.num {
 .organic-source-img {
   width: 28px;
   height: 28px;
+  flex: 0 0 auto;
+  object-fit: contain;
+}
+
+.materials-based-on {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  min-width: 0;
+  color: var(--muted);
+  line-height: 1.35;
+  white-space: normal;
+}
+
+.materials-based-on-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.materials-based-on-img {
+  width: 24px;
+  height: 24px;
   flex: 0 0 auto;
   object-fit: contain;
 }
