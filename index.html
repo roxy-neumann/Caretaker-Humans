@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>The Last Caretaker Foods</title>
+    <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+    <div class="page">
+        <div class="header">
+            <h1 class="title">The Last Caretaker - Foods</h1>
+        </div>
+
+        <div class="panel controls">
+            <div class="controls-grid">
+                <div class="controls-left">
+                    <div class="search-block">
+                        <input id="searchInput" class="search-input" type="text" placeholder="Type part of a name..." />
+                    </div>
+
+                    <button id="clearFiltersBtn" class="clear-btn" type="button">Clear Filters</button>
+
+                    <div id="resultsInfo">0 items</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel table-panel">
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr id="tableHeadRow"></tr>
+                    </thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="imageModal" class="image-modal" aria-hidden="true">
+        <div class="image-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="imageModalTitle">
+            <button id="imageModalClose" class="image-modal-close" type="button" aria-label="Close image preview">x</button>
+            <img id="imageModalImg" class="image-modal-img" src="" alt="" />
+            <div id="imageModalTitle" class="image-modal-title"></div>
+        </div>
+    </div>
+
+    <div id="recipeModal" class="recipe-modal" aria-hidden="true">
+        <div class="recipe-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="recipeModalTitle">
+            <button id="recipeModalClose" class="modal-close" type="button" aria-label="Close recipe">x</button>
+            <h2 id="recipeModalTitle" class="recipe-modal-title"></h2>
+            <ul id="recipeModalList" class="recipe-modal-list"></ul>
+        </div>
+    </div>
+
+    <script src="data.js"></script>
+    <script src="app.js"></script>
+</body>
+
+</html>
