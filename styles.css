@@ -109,7 +109,7 @@ body {
 .search-input,
 .stat-input {
   width: 100%;
-  padding: 12px 14px;
+  padding: 6px 8px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
   outline: none;
@@ -120,7 +120,7 @@ body {
 }
 
 .stat-input {
-  padding: 10px 12px;
+  padding: 6px 8px;
 }
 
 .search-input:focus,
@@ -155,6 +155,7 @@ table {
 
 .memory-table th {
   font-size: 12px;
+  padding: 5px;
 }
 
 .memory-table td {

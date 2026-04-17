@@ -41,7 +41,6 @@ const memoryStatOptions = [
   'Discipline',
   'Empathy',
   'Focus',
-  'Intellect',
   'Leadership',
   'Logic',
   'Patience',
