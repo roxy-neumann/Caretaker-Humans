@@ -21,6 +21,12 @@ function hasStatValue(item, key) {
   return item.stats.some(entry => entry.name === key);
 }
 
+function hasSortValue(item, column) {
+  if (column.type === 'number') return hasStatValue(item, column.key);
+  const value = getColumnValue(item, column);
+  return value !== undefined && value !== null && value !== '';
+}
+
 function getStatOptions(items) {
   const seen = new Set();
   const options = [];
@@ -169,14 +175,31 @@ function applyFilters(table) {
 }
 
 function applySorting(table, data) {
-  const column = table.columns.find(col => col.key === table.state.sortKey);
-  const dir = table.state.sortDir === 'asc' ? 1 : -1;
-
   return [...data].sort((a, b) => {
-    const result = compareValues(a, b, column);
-    if (result !== 0) return result * dir;
+    if (table.state.sorts.length > 1) {
+      const presenceA = getSortPresenceCount(table, a);
+      const presenceB = getSortPresenceCount(table, b);
+      if (presenceA !== presenceB) return presenceB - presenceA;
+    }
+
+    for (const sort of table.state.sorts) {
+      const column = table.columns.find(col => col.key === sort.key);
+      if (!column) continue;
+
+      const dir = sort.dir === 'asc' ? 1 : -1;
+      const result = compareValues(a, b, column);
+      if (result !== 0) return result * dir;
+    }
+
     return a.name.localeCompare(b.name);
   });
+}
+
+function getSortPresenceCount(table, item) {
+  return table.state.sorts.reduce((count, sort) => {
+    const column = table.columns.find(col => col.key === sort.key);
+    return column && hasSortValue(item, column) ? count + 1 : count;
+  }, 0);
 }
 
 function getProcessedItems(table) {
@@ -188,7 +211,9 @@ function renderHeader(table) {
 
   for (const column of table.columns) {
     const th = document.createElement('th');
-    if (column.key === table.state.sortKey) th.classList.add('sorted-column');
+    const sortIndex = table.state.sorts.findIndex(sort => sort.key === column.key);
+    const sort = sortIndex >= 0 ? table.state.sorts[sortIndex] : null;
+    if (sort) th.classList.add('sorted-column');
 
     const stat = table.statOptions.find(option => option === column.key);
     const headerContent = document.createElement('div');
@@ -204,18 +229,15 @@ function renderHeader(table) {
 
     if (column.sortable) {
       th.classList.add('sortable');
+      th.title = 'Click to sort. Shift+Click to add, flip, or remove this column from combined sorting. Maximum 3 columns.';
 
       const indicator = document.createElement('span');
       indicator.className = 'sort-indicator';
-      indicator.textContent = table.state.sortKey === column.key ? (table.state.sortDir === 'asc' ? '↑' : '↓') : '';
+      indicator.textContent = sort ? `${sort.dir === 'asc' ? '↑' : '↓'}${sortIndex + 1}` : '';
       label.appendChild(indicator);
 
-      th.addEventListener('click', () => {
-        if (table.state.sortKey === column.key) table.state.sortDir = table.state.sortDir === 'asc' ? 'desc' : 'asc';
-        else {
-          table.state.sortKey = column.key;
-          table.state.sortDir = 'desc';
-        }
+      th.addEventListener('click', event => {
+        updateSort(table, column.key, event.shiftKey);
         renderTableOnly(table);
         renderHeader(table);
       });
@@ -223,6 +245,30 @@ function renderHeader(table) {
 
     table.elements.headRow.appendChild(th);
   }
+}
+
+function updateSort(table, key, isMultiSort) {
+  const index = table.state.sorts.findIndex(sort => sort.key === key);
+
+  if (!isMultiSort) {
+    if (index === 0 && table.state.sorts.length === 1) {
+      table.state.sorts[0].dir = table.state.sorts[0].dir === 'asc' ? 'desc' : 'asc';
+    }
+    else table.state.sorts = [{ key, dir: 'desc' }];
+    return;
+  }
+
+  if (index === -1) {
+    if (table.state.sorts.length >= 3) return;
+    table.state.sorts.push({ key, dir: 'desc' });
+    return;
+  }
+
+  const sort = table.state.sorts[index];
+  if (sort.dir === 'desc') sort.dir = 'asc';
+  else table.state.sorts.splice(index, 1);
+
+  if (!table.state.sorts.length) table.state.sorts = [{ key: 'name', dir: 'asc' }];
 }
 
 function renderPictureCell(table, item, td) {
@@ -281,7 +327,7 @@ function renderBody(table, rows) {
 
     for (const column of table.columns) {
       const td = document.createElement('td');
-      if (column.key === table.state.sortKey) td.classList.add('sorted-column');
+      if (table.state.sorts.some(sort => sort.key === column.key)) td.classList.add('sorted-column');
 
       if (column.key === 'picture') renderPictureCell(table, item, td);
       else if (column.key === 'rarity') td.innerHTML = `<span class="rarity-badge ${getRarityClass(item.rarity)}">${item.rarity}</span>`;
@@ -323,6 +369,7 @@ function renderTableOnly(table) {
 function clearFilters(table) {
   table.state.searchText = '';
   table.state.minStats = getInitialMinStats(table.statOptions);
+  table.state.sorts = [{ key: 'name', dir: 'asc' }];
   table.elements.searchInput.value = '';
 
   for (const stat of table.statOptions) {
@@ -331,6 +378,7 @@ function clearFilters(table) {
   }
 
   renderTableOnly(table);
+  renderHeader(table);
 }
 
 function initTable(table) {
@@ -360,8 +408,7 @@ const tables = [
     state: {
       searchText: '',
       minStats: getInitialMinStats(statOptions),
-      sortKey: 'name',
-      sortDir: 'asc'
+      sorts: [{ key: 'name', dir: 'asc' }]
     },
     elements: {
       searchInput: document.getElementById('foodSearchInput'),
@@ -384,8 +431,7 @@ const tables = [
     state: {
       searchText: '',
       minStats: getInitialMinStats(resolvedMemoryStatOptions),
-      sortKey: 'name',
-      sortDir: 'asc'
+      sorts: [{ key: 'name', dir: 'asc' }]
     },
     elements: {
       searchInput: document.getElementById('memorySearchInput'),

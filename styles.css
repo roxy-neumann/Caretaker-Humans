@@ -318,10 +318,11 @@ td.num {
 
 .sort-indicator {
   display: inline-block;
-  min-width: 16px;
-  margin-left: 6px;
+  min-width: 22px;
+  margin-left: 4px;
   color: var(--accent-2);
   font-weight: 700;
+  font-size: 11px;
 }
 
 .rarity-badge {
