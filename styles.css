@@ -34,6 +34,19 @@ body {
 
 .header {
   margin-bottom: 18px;
+  display: grid;
+  grid-template-columns: 520px 1fr;
+  gap: 18px;
+}
+
+.header-ad-container {
+  width: 100%;
+}
+.header-ad-container ins{
+  width: auto !important;
+  height: 80px !important;
+  border: 0.5px solid var(--border);
+  /* background-color: #8d391c; */
 }
 
 .title-row {
